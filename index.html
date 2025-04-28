@@ -49,7 +49,7 @@
   const navbarLeft = document.querySelector('.nav-left')
   const navbarRight = document.querySelector('.nav-right')
   const stepsDiv = document.getElementById('steps')
-  const pathDiv = document.getElementById('path')
+  //const pathDiv = document.getElementById('path')
   const finalText = document.getElementById('finaltext')
   const navbar = document.getElementById('navbar')
   const themeToggle = document.createElement('button')
@@ -154,7 +154,7 @@
 
     currentPath = currentPath.slice(0, level)
     currentPath.push(stepName)
-    pathDiv.textContent = currentPath.join(' -> ')
+    //pathDiv.textContent = currentPath.join(' -> ')
     if (Object.keys(stepObj || {}).length === 0) {
       finalText.style.display = 'block'
       finalText.value = currentPath.join(' -> ')
@@ -168,7 +168,7 @@
     Array.from(parent.children).forEach(b => b.style.display = 'block')
     const level = parseInt(button.dataset.level)
     currentPath = currentPath.slice(0, level)
-    pathDiv.textContent = currentPath.join(' -> ')
+    //pathDiv.textContent = currentPath.join(' -> ')
     if (!currentPath.length) {
       finalText.style.display = 'none'
       finalText.value = ''
@@ -186,7 +186,7 @@
 
   function clearAll() {
     stepsDiv.innerHTML = ''
-    pathDiv.textContent = ''
+    //pathDiv.textContent = ''
     finalText.value = ''
     finalText.style.display = 'none'
     currentPath = []
