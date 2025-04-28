@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>support tool</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #111111;
+      --nav: #333333;
+      --button: #555555;
+      --hover: #777777;
+      --select: #008cba;
+      --light: #f2f2f2;
+    }
+    body { font-family: sans-serif; margin: 0; padding: 0; background: var(--bg); color: var(--text); transition: background 0.3s, color 0.3s; }
+    nav { background: var(--nav); padding: 10px; display: flex; align-items: center; justify-content: space-between; }
+    nav h2 { color: #fff; margin: 0; font-size: 16px; }
+    .nav-left { display: flex; gap: 10px; }
+    .nav-right { color: #fff; font-size: 11px; }
+    nav button { background: var(--button); color: #fff; border: none; padding: 10px 20px; cursor: pointer; transition: background 0.3s; }
+    nav button:hover { background: var(--hover); }
+    #content { padding: 20px; }
+    .steps { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; transition: all 0.3s ease; }
+    .steps button { padding: 10px 15px; width: fit-content; transition: all 0.3s ease; }
+    .steps button.selected { background: var(--select); }
+    #path { margin-top: 20px; font-weight: bold; }
+    #finaltext { margin-top: 30px; width: 100%; height: 100px; display: none; transition: all 0.3s; }
+    .theme-toggle { margin-left: 20px; background: transparent; border: 1px solid #fff; color: #fff; padding: 5px 10px; cursor: pointer; font-size: 14px; transition: background 0.3s; }
+    .theme-toggle:hover { background: var(--light); color: var(--nav); }
+    .theme-toggle:active { background: #d9d9d9; }
+  </style>
+</head>
+<body>
+
+<nav id="navbar">
+  <div class="nav-left"></div>
+  <div class="nav-right">Created By Ahmed Sayed</div>
+</nav>
+
+<div id="content">
+  <div id="steps" class="steps"></div>
+  <div id="path"></div>
+  <textarea id="finaltext" placeholder="your path will appear here..." readonly></textarea>
+</div>
+
+<script>
+
+  const navbarLeft = document.querySelector('.nav-left')
+  const navbarRight = document.querySelector('.nav-right')
+  const stepsDiv = document.getElementById('steps')
+  const pathDiv = document.getElementById('path')
+  const finalText = document.getElementById('finaltext')
+  const navbar = document.getElementById('navbar')
+  const themeToggle = document.createElement('button')
+  themeToggle.classList.add('theme-toggle')
+  const encodedMessage = 'Q3JlYXRlZCBCeSBBbWhlZCBTeXBlZA==';
+  const decodedMessage = atob(encodedMessage);
+  let currentTopic = null
+  let currentPath = []
+  let activeButtons = new Map()
+  let darkMode = localStorage.getItem('darkMode') === 'true' // Remember theme from localStorage
+  let topics = {}
+  
+  fetch('topics.json')
+    .then(response => response.json())
+    .then(data => {
+      topics = data;
+      createNav(); // Create the navbar after loading topics
+    })
+    .catch(error => console.error('Error loading topics:', error));
+
+  function createNav() {
+    Object.keys(topics).forEach(topic => {
+      const btn = document.createElement('button')
+      btn.textContent = topic
+      btn.onclick = () => {
+        clearAll()
+        currentTopic = topics[topic]
+        createSteps(currentTopic, stepsDiv)
+      }
+      navbarLeft.appendChild(btn)
+    })
+    
+    const clearBtn = document.createElement('button')
+    clearBtn.textContent = 'clear'
+    clearBtn.onclick = () => clearAll()
+    navbarLeft.appendChild(clearBtn)
+
+    themeToggle.innerHTML = '🌙'
+    themeToggle.onclick = () => toggleTheme()
+    navbarRight.appendChild(themeToggle)
+  }
+
+  function createSteps(obj, container) {
+    const level = parseInt(container.dataset.level || '0')
+    Object.keys(obj).forEach(step => {
+      const btn = document.createElement('button')
+      const stepObj = obj[step]
+      const hasChildren = stepObj && Object.keys(stepObj).length > 0
+      btn.textContent = (hasChildren ? '➡️ ' : '') + step
+      btn.dataset.level = level
+      btn.dataset.name = step
+      btn.dataset.hasChildren = hasChildren
+      btn.style.marginLeft = (level * 20) + 'px'
+      btn.onclick = (e) => handleStepClick(e.target, obj)
+      container.appendChild(btn)
+    })
+  }
+
+  function handleStepClick(button, obj) {
+    const stepName = button.dataset.name
+    const parent = button.parentElement
+    const level = parseInt(button.dataset.level)
+    const nextLevel = level + 1
+
+    // If the button is already in activeButtons, reset its children
+    if (activeButtons.has(button)) {
+      // If the button has no children, show the parent siblings again
+      if (button.dataset.hasChildren === "false") {
+        const siblings = Array.from(parent.children);
+        siblings.forEach(sibling => {
+          if (sibling !== button) {
+            // Toggle sibling visibility without hiding the clicked button
+            sibling.style.display = sibling.style.display === 'none' ? 'block' : 'none';
+          }
+        });
+
+      }
+      removeBelow(button)
+      activeButtons.delete(button)
+      button.classList.remove('selected')
+      button.textContent = (button.dataset.hasChildren === "true" ? '➡️ ' : '') + stepName
+      return
+    }
+
+    // Hide sibling buttons and mark the clicked button as selected
+    Array.from(parent.children).forEach(b => {
+      if (b !== button) b.style.display = 'none'
+      b.classList.remove('selected')
+    })
+    button.classList.add('selected')
+
+    const stepObj = findStepObj(currentTopic, currentPath.concat(stepName))
+    if (stepObj && Object.keys(stepObj).length >= 0) {
+      const newContainer = document.createElement('div')
+      newContainer.className = 'steps'
+      newContainer.dataset.level = nextLevel
+      button.after(newContainer)
+      createSteps(stepObj, newContainer)
+      activeButtons.set(button, newContainer)
+      if (button.dataset.hasChildren === "true") button.textContent = '🔽 ' + stepName
+    }
+
+    currentPath = currentPath.slice(0, level)
+    currentPath.push(stepName)
+    pathDiv.textContent = currentPath.join(' -> ')
+    if (Object.keys(stepObj || {}).length === 0) {
+      finalText.style.display = 'block'
+      finalText.value = currentPath.join(' -> ')
+    }
+  }
+
+  function removeBelow(button) {
+    const container = activeButtons.get(button)
+    if (container) container.remove()
+    const parent = button.parentElement
+    Array.from(parent.children).forEach(b => b.style.display = 'block')
+    const level = parseInt(button.dataset.level)
+    currentPath = currentPath.slice(0, level)
+    pathDiv.textContent = currentPath.join(' -> ')
+    if (!currentPath.length) {
+      finalText.style.display = 'none'
+      finalText.value = ''
+    }
+  }
+
+  function findStepObj(obj, path) {
+    let temp = obj
+    for (let step of path) {
+      if (!temp[step]) return null
+      temp = temp[step]
+    }
+    return temp
+  }
+
+  function clearAll() {
+    stepsDiv.innerHTML = ''
+    pathDiv.textContent = ''
+    finalText.value = ''
+    finalText.style.display = 'none'
+    currentPath = []
+    currentTopic = null
+    activeButtons.clear()
+  }
+
+  function toggleTheme() {
+    darkMode = !darkMode
+    if (darkMode) {
+      document.documentElement.style.setProperty('--bg', '#111')
+      document.documentElement.style.setProperty('--text', '#eee')
+      document.documentElement.style.setProperty('--nav', '#222')
+      document.documentElement.style.setProperty('--button', '#444')
+      document.documentElement.style.setProperty('--hover', '#666')
+      document.documentElement.style.setProperty('--select', '#00bcd4')
+      themeToggle.innerHTML = '🌕'
+    } else {
+      document.documentElement.style.setProperty('--bg', '#fff')
+      document.documentElement.style.setProperty('--text', '#111')
+      document.documentElement.style.setProperty('--nav', '#333')
+      document.documentElement.style.setProperty('--button', '#555')
+      document.documentElement.style.setProperty('--hover', '#777')
+      document.documentElement.style.setProperty('--select', '#008cba')
+      themeToggle.innerHTML = '🌙'
+    }
+    localStorage.setItem('darkMode', darkMode)
+  }
+  
+
+  // Load initial theme from localStorage
+  if (darkMode) toggleTheme()
+  
+</script>
+
+</body>
+</html>
