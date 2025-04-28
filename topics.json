@@ -1,0 +1,21 @@
+{
+  "topic1": {
+    "step1": {
+      "substep1": {},
+      "substep2": {}
+    },
+    "step2": {
+      "substep3": {},
+      "substep4": {}
+    }
+  },
+  "topic2": {
+    "stepA": {
+      "substepA1": {},
+      "substepA2": {
+        "subsubstepA21": {}
+      }
+    },
+    "stepB": {}
+  }
+}
